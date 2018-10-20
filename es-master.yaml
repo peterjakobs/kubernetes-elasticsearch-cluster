@@ -1,0 +1,96 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: elasticsearch-master
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: es-master
+  labels:
+    component: elasticsearch
+    role: master
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: elasticsearch
+        role: master
+    spec:
+      initContainers:
+      - name: init-sysctl
+        image: busybox:1.27.2
+        command:
+        - sysctl
+        - -w
+        - vm.max_map_count=262144
+        securityContext:
+          privileged: true
+      containers:
+      - name: es-master
+        image: carlosedp/docker-elasticsearch-kubernetes:6.2.3
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: CLUSTER_NAME
+          value: myesdb
+        - name: NUMBER_OF_MASTERS
+          value: "1"
+        - name: NODE_MASTER
+          value: "true"
+        - name: NODE_INGEST
+          value: "false"
+        - name: NODE_DATA
+          value: "false"
+        - name: HTTP_ENABLE
+          value: "false"
+        - name: ES_JAVA_OPTS
+          value: -Xms512m -Xmx512m
+        - name: PROCESSORS
+          valueFrom:
+            resourceFieldRef:
+              resource: limits.cpu
+        #- name: "ES_PLUGINS_INSTALL"
+        #  value: "x-pack"
+        resources:
+          limits:
+            cpu: 1
+        ports:
+        - containerPort: 9300
+          name: transport
+        #livenessProbe:
+        #  tcpSocket:
+        #    port: transport
+        #  initialDelaySeconds: 180
+        #  periodSeconds: 10
+        #readinessProbe:
+        #  tcpSocket:
+        #    port: transport
+        #  initialDelaySeconds: 30
+        #  periodSeconds: 20
+        volumeMounts:
+        - name: storage
+          mountPath: /data
+        - name: config
+          mountPath: /elasticsearch/config/elasticsearch.yml
+          subPath: elasticsearch.yml
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: elasticsearch-master
+      - name : config
+        configMap:
+          name: es-configmap

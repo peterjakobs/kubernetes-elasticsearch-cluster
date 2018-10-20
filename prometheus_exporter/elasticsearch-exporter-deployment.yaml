@@ -1,0 +1,71 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: elasticsearch-exporter
+  namespace: monitoring
+  labels:
+    k8s-app: elasticsearch-exporter
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        k8s-app: elasticsearch-exporter
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - command:
+        - /bin/elasticsearch_exporter
+        - -es.uri=http://elasticsearch.logging.svc:9200
+        - -es.timeout=60s
+        - -es.all=true
+        image: carlosedp/elasticsearch_exporter:v1.0.2-arm64
+        securityContext:
+          capabilities:
+            drop:
+            - SETPCAP
+            - MKNOD
+            - AUDIT_WRITE
+            - CHOWN
+            - NET_RAW
+            - DAC_OVERRIDE
+            - FOWNER
+            - FSETID
+            - KILL
+            - SETGID
+            - SETUID
+            - NET_BIND_SERVICE
+            - SYS_CHROOT
+            - SETFCAP
+          readOnlyRootFilesystem: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 9108
+          initialDelaySeconds: 30
+          timeoutSeconds: 10
+        name: elasticsearch-exporter
+        ports:
+        - name: es-metrics
+          containerPort: 9108
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 9108
+          initialDelaySeconds: 10
+          timeoutSeconds: 10
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 25m
+            memory: 64Mi
+      restartPolicy: Always

@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-hq-pv-claim
+  labels:
+    component: elk
+    role: elasticsearch-hq
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: elasticsearch-hq
+  labels:
+    component: elk
+    role: elasticsearch-hq
+spec:
+  replicas: 1
+  selector:
+    component: elk
+    role: elasticsearch-hq
+  template:
+    metadata:
+      labels:
+        component: elk
+        role: elasticsearch-hq
+    spec:
+      serviceAccount: elk
+      containers:
+      - name: elasticsearch-hq
+        image: carlosedp/elasticsearch-hq:v3.4.0-arm64
+        env:
+        - name: HQ_DEFAULT_URL
+          value: "http://elasticsearch-hq.internal.carlosedp.com"
+        ports:
+        - containerPort: 5000
+          name: http
+          protocol: TCP
+#        volumeMounts:
+#        - name: config-db
+#          mountPath: /elastichq.db
+#          subPath: elastichq.db
+#      volumes:
+#      - name : config-db
+#        persistentVolumeClaim:
+#          claimName: elasticsearch-hq-pv-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-hq
+  labels:
+    component: elk
+    role: elasticsearch-hq
+spec:
+  selector:
+    component: elk
+    role: elasticsearch-hq
+  type: NodePort
+  ports:
+  - name: http
+    port: 80
+    targetPort: 5000
+    protocol: TCP
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: elasticsearch-hq
+  annotations:
+    traefik.frontend.rule.type: PathPrefix
+spec:
+  rules:
+  - host: elasticsearch-hq.internal.carlosedp.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: elasticsearch-hq
+          servicePort: 80
+

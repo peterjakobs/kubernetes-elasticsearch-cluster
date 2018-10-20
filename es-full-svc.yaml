@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  labels:
+    component: elasticsearch
+    role: full
+spec:
+  selector:
+    component: elasticsearch
+    role: full
+  ports:
+  - name: http
+    port: 9200
+  type: NodePort
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: elasticsearch
+  annotations:
+    traefik.frontend.rule.type: PathPrefix
+spec:
+  rules:
+  - host: elasticsearch
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: elasticsearch
+          servicePort: 9200
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-discovery
+  labels:
+    component: elasticsearch
+    role: full
+spec:
+  selector:
+    component: elasticsearch
+    role: full
+  ports:
+  - name: transport
+    port: 9300
+    protocol: TCP

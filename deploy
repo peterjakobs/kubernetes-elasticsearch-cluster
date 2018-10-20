@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+
+if [ -z "${KUBECONFIG}" ]; then
+    export KUBECONFIG=~/.kube/config
+fi
+
+# CAUTION - setting NAMESPACE will deploy most components to the given namespace
+# however some are hardcoded to 'monitoring'. Only use if you have reviewed all manifests.
+
+if [ -z "${NAMESPACE}" ]; then
+    NAMESPACE=logging
+fi
+
+kubectl create namespace "$NAMESPACE"
+
+kctl() {
+    kubectl --namespace "$NAMESPACE" "$@"
+}
+# alias kctl='kubectl --namespace logging'
+
+# Deploy Elasticsearch service
+#kctl apply -f es-discovery-svc.yaml
+#kctl apply -f es-svc.yaml
+kubectl --namespace logging  apply -f es-configmap.yaml
+
+# Deploy Elasticsearch master node and wait until it's up
+#kctl apply -f es-master.yaml
+#until kctl rollout status deployment es-master  > /dev/null 2>&1; do sleep 1; printf "."; done
+
+# Deploy Elasticsearch client node and wait until it's up
+#kctl apply -f es-client.yaml
+#until kctl rollout status deployment es-client  > /dev/null 2>&1; do sleep 1; printf "."; done
+
+# Deploy Elasticsearch data node and wait until it's up
+#kctl apply -f es-data-statefulset.yaml
+#until kctl rollout status statefulset es-data  > /dev/null 2>&1; do sleep 1; printf "."; done
+
+# As an alternative, replace es-discovery-svc.yaml, es-svc.yaml and the master, client and data manifests
+# with the ones below to have a three-node cluster with all roles in all nodes. 
+kubectl --namespace logging apply -f es-full-svc.yaml
+kubectl --namespace logging apply -f es-full.yaml
+
+
+# Deploy Curator
+kctl apply -f es-curator-config.yaml
+kctl apply -f es-curator_v1beta1.yaml
+
+# Deploy Kibana
+kubectl --namespace logging apply -f kibana-configmap.yaml
+kubectl --namespace logging apply -f kibana-external-ingress.yaml
+kubectl --namespace logging apply -f kibana-service-account.yaml
+kubectl --namespace logging apply -f kibana-svc.yaml
+kubectl --namespace logging apply -f kibana.yaml
+
+# Deploy Fluentd
+kctl apply -f fluentd-es-configmap.yaml
+kctl apply -f fluentd-es-ds.yaml
+
+echo "done!"
+

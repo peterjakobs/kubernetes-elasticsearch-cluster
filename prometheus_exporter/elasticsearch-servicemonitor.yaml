@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: elasticsearch-exporter
+  namespace: monitoring
+  labels:
+    k8s-app: elasticsearch-exporter
+spec:
+  jobLabel: k8s-app
+  endpoints:
+  - port: es-metrics
+    interval: 30s
+  selector:
+    matchLabels:
+      k8s-app: elasticsearch-exporter
+  namespaceSelector:
+    matchNames:
+    - monitoring

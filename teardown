@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+if [ -z "${KUBECONFIG}" ]; then
+    export KUBECONFIG=~/.kube/config
+fi
+
+# CAUTION - setting NAMESPACE will deploy most components to the given namespace
+# however some are hardcoded to 'monitoring'. Only use if you have reviewed all manifests.
+
+if [ -z "${NAMESPACE}" ]; then
+    NAMESPACE=logging
+fi
+
+kctl() {
+    kubectl --namespace "$NAMESPACE" "$@"
+}
+
+# Deploy Fluentd
+kctl delete -f fluentd-es-configmap.yaml
+kctl delete -f fluentd-es-ds.yaml
+
+# Delete Kibana
+kctl delete -f kibana-configmap.yaml
+kctl delete -f kibana-external-ingress.yaml
+kctl delete -f kibana-service-account.yaml
+kctl delete -f kibana-svc.yaml
+kctl delete -f kibana.yaml
+
+# Delete Curator
+kctl delete -f es-curator-config.yaml
+kctl delete -f es-curator_v1beta1.yaml
+
+# Delete Elasticsearch nodes
+kctl delete -f es-master.yaml
+kctl delete -f es-client.yaml
+kctl delete -f es-data-statefulset.yaml
+
+# Delete Elasticsearch services
+kctl delete -f es-discovery-svc.yaml
+kctl delete -f es-svc.yaml
+kctl delete -f es-configmap.yaml
+
+# Delete namespace
+kubectl delete namespace $NAMESPACE
+
+echo "done!"
+
