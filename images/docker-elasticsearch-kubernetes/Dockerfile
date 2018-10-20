@@ -1,4 +1,4 @@
-FROM peterjakobs/elasticsearch:v6.2.3-arm
+FROM peterjakobs/elasticsearch:v6.4.2-arm
 
 # Override config, otherwise plug-in install will fail
 ADD config /elasticsearch/config

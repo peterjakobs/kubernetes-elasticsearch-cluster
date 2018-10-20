@@ -5,7 +5,7 @@ ENV JAVA_HOME=/opt/java
 # Export HTTP & Transport
 EXPOSE 9200 9300
 
-ENV ES_VERSION 6.2.3
+ENV ES_VERSION 6.4.2
 
 ENV DOWNLOAD_URL "https://artifacts.elastic.co/downloads/elasticsearch"
 ENV ES_TARBAL "${DOWNLOAD_URL}/elasticsearch-${ES_VERSION}.tar.gz"
